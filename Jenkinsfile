@@ -16,9 +16,9 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh """
+                sh '''
                 docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
-                """
+                '''
             }
         }
 
@@ -27,20 +27,3 @@ pipeline {
                 withCredentials([usernamePassword(
                     credentialsId: 'dockerhub-creds',
                     usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
-                    sh """
-                    echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                    docker push ${IMAGE_NAME}:${IMAGE_TAG}
-                    """
-                }
-            }
-        }
-
-        stage('Deploy to Kubernetes') {
-            steps {
-                sh """
-                kubectl apply -f devops-demo-deployment.yaml
-                kubectl apply -f service.yaml
-                kubectl rollout status deployment/devops-demo -n default
-                """
