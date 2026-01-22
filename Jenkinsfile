@@ -32,7 +32,7 @@ pipeline {
             steps {
                 sh 'kubectl apply -f devops-demo-deployment.yaml'
                 sh 'kubectl apply -f service.yaml'
-                sh 'kubectl rollout status deployment/devops-demo'
+                sh 'kubectl rollout status deployment/devops-demo-website'
             }
         }
     }
