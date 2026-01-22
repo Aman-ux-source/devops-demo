@@ -21,19 +21,26 @@ pipeline {
                     usernameVariable: 'DOCKER_USER', 
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    // Login to Docker Hub non-interactively
                     sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
-                    
-                    // Push image
                     sh 'docker push amanuxsource/devops-demo:latest'
                 }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                // Apply Kubernetes manifests
+                sh 'kubectl apply -f k8s/'
+                
+                // Optional: rollout status to ensure pods are running
+                sh 'kubectl rollout status deployment/devops-demo -n default'
             }
         }
     }
     
     post {
         success {
-            echo "Docker image built and pushed successfully! 🚀"
+            echo "Docker image built, pushed, and deployed successfully! 🚀"
         }
         failure {
             echo "Pipeline failed. Check logs! ❌"
