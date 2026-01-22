@@ -1,13 +1,5 @@
 pipeline {
-    agent {
-        docker {
-            image 'lachlanevenson/k8s-kubectl:latest'
-            args '''
-              -v /var/run/docker.sock:/var/run/docker.sock
-              -v /var/jenkins_home/.kube:/root/.kube
-            '''
-        }
-    }
+    agent any
 
     environment {
         IMAGE_NAME = "amanuxsource/devops-demo"
@@ -52,16 +44,3 @@ pipeline {
                 kubectl apply -f service.yaml
                 kubectl rollout status deployment/devops-demo -n default
                 """
-            }
-        }
-    }
-
-    post {
-        success {
-            echo "✅ Docker image built, pushed & deployed to Kubernetes successfully 🚀"
-        }
-        failure {
-            echo "❌ Pipeline failed. Check Jenkins logs"
-        }
-    }
-}
