@@ -1,5 +1,10 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'lachlanevenson/k8s-kubectl:latest' // lightweight image with kubectl
+            args '-v /home/ubuntu/.kube:/root/.kube'  // mount kubeconfig from host
+        }
+    }
 
     stages {
         stage('Clone') {
@@ -29,15 +34,12 @@ pipeline {
 
         stage('Deploy to Kubernetes') {
             steps {
-                // Apply Kubernetes manifests
                 sh 'kubectl apply -f k8s/'
-                
-                // Optional: rollout status to ensure pods are running
                 sh 'kubectl rollout status deployment/devops-demo -n default'
             }
         }
     }
-    
+
     post {
         success {
             echo "Docker image built, pushed, and deployed successfully! 🚀"
