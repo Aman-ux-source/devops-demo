@@ -1,6 +1,11 @@
 pipeline {
     agent any
 
+    environment {
+        IMAGE_NAME = "amanuxsource/devops-demo"
+        IMAGE_TAG  = "${BUILD_NUMBER}"
+    }
+
     stages {
 
         stage('Clone') {
@@ -11,7 +16,7 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t amanuxsource/devops-demo:latest .'
+                sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
             }
         }
 
@@ -23,15 +28,17 @@ pipeline {
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
                     sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
-                    sh 'docker push amanuxsource/devops-demo:latest'
+                    sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
                 }
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
-                sh 'kubectl apply -f devops-demo-deployment.yaml'
-                sh 'kubectl apply -f service.yaml'
+                sh """
+                kubectl set image deployment/devops-demo-website \
+                devops-demo-container=${IMAGE_NAME}:${IMAGE_TAG}
+                """
                 sh 'kubectl rollout status deployment/devops-demo-website'
             }
         }
@@ -39,7 +46,7 @@ pipeline {
 
     post {
         success {
-            echo '✅ Pipeline Success'
+            echo '✅ Image built, pushed & deployed successfully'
         }
         failure {
             echo '❌ Pipeline Failed'
