@@ -1,11 +1,6 @@
 pipeline {
     agent any
 
-    environment {
-        IMAGE_NAME = "amanuxsource/devops-demo"
-        IMAGE_TAG  = "${BUILD_NUMBER}"
-    }
-
     stages {
 
         stage('Clone') {
@@ -16,9 +11,7 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh '''
-                  docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
-                '''
+                sh 'docker build -t amanuxsource/devops-demo:latest .'
             }
         }
 
@@ -29,10 +22,8 @@ pipeline {
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    sh '''
-                      echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                      docker push ${IMAGE_NAME}:${IMAGE_TAG}
-                    '''
+                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+                    sh 'docker push amanuxsource/devops-demo:latest'
                 }
             }
         }
@@ -40,15 +31,12 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 sh '''
-                  # Create deployment if not exists
                   kubectl apply -f devops-demo-deployment.yaml
                   kubectl apply -f service.yaml
 
-                  # Update image (main magic ✨)
-                  kubectl set image deployment/devops-demo-website \
-                    devops-demo-container=${IMAGE_NAME}:${IMAGE_TAG} || true
+                  # Force rollout even with :latest
+                  kubectl rollout restart deployment/devops-demo-website
 
-                  # Wait for rollout
                   kubectl rollout status deployment/devops-demo-website
                 '''
             }
@@ -57,10 +45,10 @@ pipeline {
 
     post {
         success {
-            echo '✅ CI/CD Pipeline completed successfully'
+            echo '✅ Pipeline Success'
         }
         failure {
-            echo '❌ CI/CD Pipeline failed'
+            echo '❌ Pipeline Failed'
         }
     }
 }
