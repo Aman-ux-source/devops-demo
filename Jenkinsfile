@@ -16,7 +16,9 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
+                sh '''
+                  docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+                '''
             }
         }
 
@@ -27,29 +29,38 @@ pipeline {
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
-                    sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
+                    sh '''
+                      echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                      docker push ${IMAGE_NAME}:${IMAGE_TAG}
+                    '''
                 }
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
-                sh """
-                kubectl set image deployment/devops-demo-website \
-                devops-demo-container=${IMAGE_NAME}:${IMAGE_TAG}
-                """
-                sh 'kubectl rollout status deployment/devops-demo-website'
+                sh '''
+                  # Create deployment if not exists
+                  kubectl apply -f devops-demo-deployment.yaml
+                  kubectl apply -f service.yaml
+
+                  # Update image (main magic ✨)
+                  kubectl set image deployment/devops-demo-website \
+                    devops-demo-container=${IMAGE_NAME}:${IMAGE_TAG} || true
+
+                  # Wait for rollout
+                  kubectl rollout status deployment/devops-demo-website
+                '''
             }
         }
     }
 
     post {
         success {
-            echo '✅ Image built, pushed & deployed successfully'
+            echo '✅ CI/CD Pipeline completed successfully'
         }
         failure {
-            echo '❌ Pipeline Failed'
+            echo '❌ CI/CD Pipeline failed'
         }
     }
 }
